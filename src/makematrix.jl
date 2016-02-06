@@ -9,9 +9,9 @@ using MathProgBase
 """
 Translate an arbitrary function `objective` into a LP minimization vector near `x0`.
 """
-function objectivevector(objective, x0)
+function objectivevector(objective, x0; args=[])
     asfloats = float([x0...])
-    -ForwardDiff.gradient(xx -> objective(xx...))(asfloats)
+    ForwardDiff.gradient(xx -> objective(splitargs(xx, args)...))(asfloats)
 end
 
 """
@@ -21,20 +21,39 @@ Translate arbitrary constraint functions into LP constraints.
   - x0 is a set of arguments near which the constraints should be evaluated
   - Assumes local linearity
 """
-function constraintmatrix(constraints, x0)
+function constraintmatrix(constraints, x0; args=[])
     asfloats = float([x0...])
 
     A = Float64[]
     b = Float64[]
     for constraint in constraints
-        A = [A; ForwardDiff.gradient(x -> constraint(x...), asfloats)]
-        b = [b; constraint(x0...)] # Not the final values for 'b' yet!
+        A = [A; ForwardDiff.gradient(xx -> constraint(splitargs(xx, args)...), asfloats)]
+        b = [b; constraint(splitargs(x0, args)...)] # Not the final values for 'b' yet!
     end
 
-    A = reshape(A, (div(length(A), length(x0)), length(x0)))'
+    A = reshape(A, (length(x0), div(length(A), length(x0))))'
     b = A * x0 - b
 
     return A, b
+end
+
+"""
+Return xx as either itself, for application to a function with as many
+arguments, or as a vector of vectors, for a function of vectors.
+"""
+function splitargs(xx, args)
+    if length(args) == 0
+        xx
+    else
+        xxs = Vector{Number}[]
+        for ii in 1:length(args)
+            start = sum(args[1:ii-1])+1
+            index = sum(args[1:ii])
+            push!(xxs, xx[start:index])
+        end
+
+        xxs
+    end
 end
 
 if ARGS == ["--test"]
