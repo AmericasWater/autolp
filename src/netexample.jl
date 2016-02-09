@@ -1,6 +1,7 @@
 include("makematrix.jl")
 
 ## 5 counties in a row with links between them
+definevars([("C", 5), ("E", 4)]);
 
 # How much resource each county requires
 requirements = [1, 2, 3, 4, 5];
@@ -25,14 +26,15 @@ end
 
 # Set up the constraints
 constraints = map(makeconstraint, 1:5);
+constnames = ASCIIString["E_balance_$ii" for ii in 1:5];
 
 # Define a single point solution
 x0 = zeros(9);
 
 # Create the matrices for the linear programming problem
-f = objectivevector(objective, x0, args=[5, 4])
-A, b = constraintmatrix(constraints, x0, args=[5, 4])
+f = objectivevector(objective, x0)
+A, b = constraintmatrix(constraints, x0, names=constnames)
 
 # Solve it!
-sol = linprog(f, A, '<', b, zeros(9), ones(9) * Inf)
+sol = linprog(Vector{Float64}(f), Array{Float64}(A), '<', Vector{Float64}(b), zeros(9), ones(9) * Inf)
 sol.sol
